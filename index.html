@@ -1,0 +1,286 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>製造業DX診断 | 業務効率化アセスメント</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;700&family=Noto+Sans+JP:wght@400;700&display=swap" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        :root { --primary: #004098; --secondary: #0078D4; --bg: #F4F7F9; --text: #1E293B; --border: #CBD5E1; --white: #ffffff; --accent: #E11D48; --success: #10B981; }
+        body { font-family: 'Inter', 'Noto Sans JP', sans-serif; background-color: var(--bg); color: var(--text); line-height: 1.6; margin: 0; }
+        .header { background: var(--white); border-bottom: 3px solid var(--primary); padding: 2.5rem 1rem; text-align: center; }
+        .header h1 { margin: 0; font-size: 1.75rem; color: var(--primary); font-weight: 700; }
+        .container { max-width: 850px; margin: 2rem auto; padding: 0 1rem; }
+        .card { background: var(--white); border-radius: 12px; box-shadow: 0 10px 15px -3px rgba(0,0,0,0.1); padding: 2.5rem; margin-bottom: 2rem; }
+        .step-container { margin-bottom: 2rem; padding: 1.5rem; background: #F8FAFC; border-radius: 8px; border: 1px solid var(--border); }
+        .step-title { display: inline-block; background: var(--primary); color: white; padding: 0.25rem 1rem; border-radius: 4px; font-size: 0.9rem; font-weight: bold; margin-bottom: 1rem; }
+        .checklist { display: flex; flex-direction: column; gap: 2px; }
+        .check-item { display: flex; align-items: flex-start; padding: 0.8rem; border-bottom: 1px solid #E2E8F0; cursor: pointer; transition: background 0.2s; }
+        .check-item:hover { background: #EDF2F7; }
+        .check-item input[type="checkbox"] { width: 22px; height: 22px; margin-right: 15px; margin-top: 3px; accent-color: var(--primary); flex-shrink: 0; cursor: pointer; }
+        .check-text { font-size: 0.95rem; font-weight: 500; cursor: pointer; }
+        .input-group { margin-bottom: 1.5rem; }
+        .input-group label { display: block; margin-bottom: 0.5rem; font-weight: bold; }
+        .input-group input { width: 100%; padding: 0.8rem; border: 1px solid var(--border); border-radius: 6px; box-sizing: border-box; font-size: 1rem; }
+        .btn-submit { width: 100%; background: var(--primary); color: white; border: none; padding: 1.5rem; font-size: 1.25rem; font-weight: bold; border-radius: 8px; cursor: pointer; transition: 0.3s; text-decoration: none; display: block; text-align: center; box-sizing: border-box; }
+        .btn-submit:hover { background: var(--secondary); transform: translateY(-2px); }
+        .btn-outline { display: block; width: 100%; padding: 1rem; border: 2px solid var(--primary); color: var(--primary); font-weight: bold; text-decoration: none; text-align: center; border-radius: 8px; margin-top: 1rem; transition: 0.3s; box-sizing: border-box; }
+        #result-area { display: none; }
+        .result-header { text-align: center; margin-bottom: 2rem; }
+        .rank-badge { display: inline-block; padding: 0.5rem 2rem; border-radius: 50px; font-size: 1.5rem; font-weight: bold; margin-bottom: 1rem; }
+        .chart-box { position: relative; margin: 1.5rem auto; max-width: 500px; min-height: 250px; }
+        .loading { display: none; text-align: center; font-weight: bold; color: var(--primary); margin: 1rem 0; }
+        .error-msg { display: none; color: #991B1B; background: #FEE2E2; padding: 1rem; border-radius: 8px; margin-top: 1rem; font-size: 0.9rem; }
+    </style>
+</head>
+<body>
+    <header class="header">
+        <h1>製造業DX診断：業務の「ムリ・ムダ」可視化シート</h1>
+        <p>現状の課題を選択し、改善のポテンシャルを測定してください。</p>
+    </header>
+
+    <div class="container">
+        <form id="dx-diagnosis-form">
+            <div class="card">
+                <div class="step-container">
+                    <span class="step-title">ステップ1：ルーティン業務</span>
+                    <div id="container-step1" class="checklist"></div>
+                </div>
+                <div class="step-container">
+                    <span class="step-title">ステップ2：情報の探し方</span>
+                    <div id="container-step2" class="checklist"></div>
+                </div>
+                <div class="step-container">
+                    <span class="step-title">ステップ3：現場のコミュニケーション</span>
+                    <div id="container-step3" class="checklist"></div>
+                </div>
+                <div class="step-container">
+                    <span class="step-title">ステップ4：組織のゆとり</span>
+                    <div id="container-step4" class="checklist"></div>
+                </div>
+            </div>
+
+            <div class="card">
+                <h3 style="margin-top:0">診断結果送付先</h3>
+                <div class="input-group">
+                    <label>会社名 <span style="color:var(--accent)">*</span></label>
+                    <input type="text" id="company" required placeholder="例：〇〇製作所">
+                </div>
+                <div class="input-group">
+                    <label>お名前 <span style="color:var(--accent)">*</span></label>
+                    <input type="text" id="name" required placeholder="例：山田 太郎">
+                </div>
+                <div class="input-group">
+                    <label>メールアドレス <span style="color:var(--accent)">*</span></label>
+                    <input type="email" id="email" required placeholder="例：t.yamada@example.co.jp">
+                </div>
+                <button type="submit" class="btn-submit" id="submit-btn">診断結果を確認する →</button>
+                <div id="loader" class="loading">⏳ 解析データを送信中...</div>
+                <div id="error-msg" class="error-msg">⚠️ データ送信に失敗しましたが、診断結果は表示されます。後ほど担当者よりご連絡することがあります。</div>
+            </div>
+        </form>
+
+        <div id="result-area" class="card">
+            <div id="result-content"></div>
+        </div>
+    </div>
+
+    <script>
+        // ============================================================
+        // ★★★ 設定エリア ★★★
+        // GASを再デプロイ後、新しいURLに書き換えてください
+        // ============================================================
+        const GAS_ENDPOINT = "https://script.google.com/macros/s/AKfycbwdxBMSAH30NBmDltpXXqTeR6JvJAyjMpz44HKIgMdX23bQZ9BW0nXF2zRXj4zuU8ES/exec";
+        // ============================================================
+
+        const questionData = {
+            step1: [
+                "毎日、日報に手書き・手入力で記入している。",
+                "現場で書いたメモを、後で事務所のパソコンに打ち込み直している。",
+                "同じ内容を、複数の書類（日報、管理表、報告書など）に書き写している。",
+                "現場写真の整理や、報告書への貼り付け作業に時間がかかっている。",
+                "毎日、似たような内容のメールを一から打ち込んでいる。"
+            ],
+            step2: [
+                "過去の不具合事例や図面を探すのに、10分以上かかることがある。",
+                "「あの資料、どこにある？」と誰かに聞く・聞かれることが1日に何度も発生している。",
+                "担当者が休みだと、仕事の進捗や詳細がわからなくなる。",
+                "会議の議事録を作るために、録音を聞き返したりメモをまとめ直したりしている。",
+                "マニュアルが古いままで、結局「詳しい人に聞く」のが一番早くなっている。"
+            ],
+            step3: [
+                "ベテラン社員の「勘」や「コツ」が、どこにも明文化されていない。",
+                "ミスが起きたとき、その原因や対策が全社で共有されず、同じミスが繰り返される。",
+                "現場の進捗状況をリアルタイムで把握できず、電話や対面で確認している。"
+            ],
+            step4: [
+                "事務作業や報告書作成のために、残業や居残りが常態化している。",
+                "「もっと楽にできるはずだ」と思いつつ、具体的にどう変えればいいか分からない。",
+                "新しいツールを導入しても、使いこなせずに放置された経験がある。",
+                "人手不足で余裕がなく、改善活動や教育に割く時間が全く取れない。"
+            ]
+        };
+
+        // チェックボックス生成
+        window.onload = function() {
+            Object.keys(questionData).forEach(stepKey => {
+                const container = document.getElementById(`container-${stepKey}`);
+                if (container) {
+                    questionData[stepKey].forEach(q => {
+                        const label = document.createElement('label');
+                        label.className = 'check-item';
+                        label.innerHTML = `<input type="checkbox" name="q" value="${q}"><span class="check-text">${q}</span>`;
+                        container.appendChild(label);
+                    });
+                }
+            });
+        };
+
+        // フォーム送信
+        document.getElementById('dx-diagnosis-form').addEventListener('submit', async (e) => {
+            e.preventDefault();
+
+            const checkedItems = Array.from(document.querySelectorAll('input[name="q"]:checked')).map(cb => cb.value);
+            const score = checkedItems.length;
+
+            const payload = {
+                company: document.getElementById('company').value,
+                name: document.getElementById('name').value,
+                email: document.getElementById('email').value,
+                score: score,
+                items: checkedItems,
+                timestamp: new Date().toLocaleString('ja-JP')
+            };
+
+            document.getElementById('submit-btn').style.display = 'none';
+            document.getElementById('loader').style.display = 'block';
+
+            // ★ no-cors モードでGASにPOST（CORSエラー回避のため）
+            // GAS側でe.postData.contentsとして受け取る
+            try {
+                await fetch(GAS_ENDPOINT, {
+                    method: 'POST',
+                    mode: 'no-cors',
+                    headers: { 'Content-Type': 'text/plain' },
+                    body: JSON.stringify(payload)
+                });
+            } catch (err) {
+                console.warn('GAS送信エラー（no-corsのため正常な場合も）:', err);
+                document.getElementById('error-msg').style.display = 'block';
+            }
+
+            document.getElementById('loader').style.display = 'none';
+            showResult(score);
+        });
+
+        function showResult(score) {
+            document.getElementById('dx-diagnosis-form').style.display = 'none';
+            const resultArea = document.getElementById('result-area');
+            const resultContent = document.getElementById('result-content');
+            resultArea.style.display = 'block';
+
+            let html = '';
+
+            if (score >= 13) {
+                html = `
+                    <div class="result-header">
+                        <span class="rank-badge" style="background:#FEE2E2; color:#991B1B;">DX初級</span>
+                        <h2>デジタル化が遅れており危険な状態です</h2>
+                    </div>
+                    <p>早急な「道具の入れ替え」が必要です。9割以上の製造業企業が既にDXに取り組んでいます。このまま放置すると、コスト競争力・採用力の両面で差が広がります。</p>
+                    <div class="chart-box" style="height:250px;"><canvas id="chartPie"></canvas></div>
+                    <div class="chart-box" style="height:250px;"><canvas id="chartBarJunior"></canvas></div>
+                    <a href="https://hatch8.co.jp/training2/#training" target="_blank" class="btn-submit">何から削減できる？詳しくはこちら →</a>
+                `;
+            } else if (score >= 6) {
+                html = `
+                    <div class="result-header">
+                        <span class="rank-badge" style="background:#DBEAFE; color:#1E40AF;">DX中級</span>
+                        <h2>伸びしろ大。今がチャンスです。</h2>
+                    </div>
+                    <p>AIツールの導入で週5〜7時間、月換算で20時間以上の削減が見込めます。競合他社に差をつけるチャンスです。</p>
+                    <div class="chart-box" style="height:250px;"><canvas id="chartBarMid"></canvas></div>
+                    <a href="https://hatch8.co.jp/training2/#training" target="_blank" class="btn-submit">資料作成を自動化する詳細はこちら →</a>
+                `;
+            } else {
+                html = `
+                    <div class="result-header">
+                        <span class="rank-badge" style="background:#D1FAE5; color:#065F46;">DX上級</span>
+                        <h2>DX優良企業。さらに攻めの経営へ。</h2>
+                    </div>
+                    <p>自社専用AI開発やクラウド構築で、業務をまるごと自動化しましょう。次のステージは「AIで稼ぐ」経営です。</p>
+                    <div class="chart-box" style="height:250px;"><canvas id="chartBarAdvanced"></canvas></div>
+                    <a href="https://hatch8.co.jp/training2/#training" target="_blank" class="btn-submit">さらに使いこなすには？詳しくはこちら →</a>
+                `;
+            }
+
+            html += `<a href="https://business.form-mailer.jp/fms/1636c50f256052" target="_blank" class="btn-outline">まずは話を聞いてみたい！（無料相談）</a>`;
+
+            resultContent.innerHTML = html;
+
+            // グラフはDOMが更新された後に描画
+            setTimeout(() => renderCharts(score), 100);
+
+            // ページトップへスクロール
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+        }
+
+        function renderCharts(score) {
+            const baseOpts = {
+                indexAxis: 'y',
+                plugins: { legend: { display: false } },
+                responsive: true,
+                maintainAspectRatio: false,
+                scales: {
+                    x: { beginAtZero: true, ticks: { font: { size: 14 } } },
+                    y: { ticks: { font: { size: 14 } } }
+                }
+            };
+
+            if (score >= 13) {
+                const pieEl = document.getElementById('chartPie');
+                const barEl = document.getElementById('chartBarJunior');
+                if (pieEl) new Chart(pieEl, {
+                    type: 'pie',
+                    data: {
+                        labels: ['全社推進', '部門推進', '未着手'],
+                        datasets: [{ data: [63.3, 27.4, 9.3], backgroundColor: ['#004098', '#0078D4', '#CBD5E1'] }]
+                    },
+                    options: { plugins: { legend: { position: 'bottom' } }, responsive: true, maintainAspectRatio: false }
+                });
+                if (barEl) new Chart(barEl, {
+                    type: 'bar',
+                    data: {
+                        labels: ['現状（月）', 'ツール導入後（月）'],
+                        datasets: [{ label: '無駄な作業時間（時間）', data: [40, 4], backgroundColor: ['#94A3B8', '#E11D48'] }]
+                    },
+                    options: baseOpts
+                });
+
+            } else if (score >= 6) {
+                const barEl = document.getElementById('chartBarMid');
+                if (barEl) new Chart(barEl, {
+                    type: 'bar',
+                    data: {
+                        labels: ['現状（月）', 'AI導入後（月）'],
+                        datasets: [{ label: '資料作成・転記時間（時間）', data: [20, 2], backgroundColor: ['#94A3B8', '#10B981'] }]
+                    },
+                    options: baseOpts
+                });
+
+            } else {
+                const barEl = document.getElementById('chartBarAdvanced');
+                if (barEl) new Chart(barEl, {
+                    type: 'bar',
+                    data: {
+                        labels: ['分析・資料化（月）', '自動化後（月）'],
+                        datasets: [{ label: '分析・報告業務時間（時間）', data: [15, 1], backgroundColor: ['#94A3B8', '#004098'] }]
+                    },
+                    options: baseOpts
+                });
+            }
+        }
+    </script>
+</body>
+</html>
